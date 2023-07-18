@@ -17,7 +17,7 @@ from dataset import KiumDataset, KiumDataset_v1
 
 
 def load_model():
-  model = torch.load(f"ckpt/densenet121_v1.pth")
+  model = torch.load(f"ckpt/effnetb4.pth")
   return model
 
 def predict():
@@ -35,7 +35,7 @@ def predict():
   
   # csv 가져오기
   df = pd.read_csv("./data/train_set/train.csv")
-  df["Index"] = df["Index"].apply(lambda x: os.path.join("data/train_set", str(x)))
+  df["path"] = df["Index"].apply(lambda x: os.path.join("data/train_set", str(x)))
   
   test_transforms = A.Compose([
     A.Normalize(0.5, 0.225),
@@ -45,7 +45,7 @@ def predict():
   
   model = load_model()
   
-  dataset = KiumDataset_v1(img_paths=df["Index"].values, labels=None, transforms=test_transforms)
+  dataset = KiumDataset_v1(img_paths=df["path"].values, labels=None, transforms=test_transforms)
   dataloader = DataLoader(
     dataset=dataset,
     batch_size=32,
@@ -68,6 +68,15 @@ def predict():
         result = probs
       else:
         result = np.concatenate([result, probs], axis=0)
-  
-  result_df = pd.DataFrame(result, columns=["Aneurysm"])
-  result_df.to_csv(f"./densenet121_output.csv", index=False)
+        
+  columns = ["Index","Aneurysm","L_ICA","R_ICA","L_PCOM","R_PCOM","L_AntChor","R_AntChor","L_ACA","R_ACA","L_ACOM","R_ACOM","L_MCA","R_MCA","L_VA","R_VA","L_PICA","R_PICA","L_SCA","R_SCA","BA","L_PCA","R_PCA"]
+  result_df = pd.DataFrame(columns=columns)
+  empty = [0] * len(df["Aneurysm"])
+  for c in result_df.columns:
+    if c == "Index":
+      result_df[c] = df["Index"].values
+    elif c == "Aneurysm":
+      result_df[c] = result
+    else:
+      result_df[c] = empty
+  result_df.to_csv(f"./output.csv", index=False)
