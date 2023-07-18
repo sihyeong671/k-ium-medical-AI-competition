@@ -16,51 +16,83 @@
 > - python 3.9.13
 > - 자세한 라이브러리는 Pipfile, Pipfile.lock을 통해 확인 가능
 > - CUDA version 11.7
-> - CuDnn : 추후 확인 필요
+> - CuDnn version 8.3
+
+## 사용방법
+
+```bash
+# 파이썬 버전 3.9.13 설치(pyenv 권장)
+# 3.9.13 환경 위에 pipenv 설치
+
+# 폴더 구조
+ckpt
+ -- pth file
+data
+ -- trian_set
+  -- 이미지
+  -- train.csv
+...
+
+git clone https://github.com/sihyeong671/k-ium-medical-AI-competition.git
+cd k-ium-medical-AI-competition
+
+pyenv local 3.9.13
+pipenv install
+
+pipenv shell
+# 학습
+# output pth이름은 trainer.py의 torch.save에서 이름 수정 필요
+python main.py --mode=train
+# 추론
+# load_model funcion에서 사용할 모델이름 수정 필요
+python main.py --mode=test
+```
+
 
 ## 개요
- 저희는 부산대학교 인공지능 동아리에서 참여한 AID팀입니다. 혈관조영술 이미지만으로 뇌동맥류를 찾는 것은 숙련된 의료 전공자가 필수입니다. 이를 인공지능을 통해 정확하게 해석하고 자동화하는 것은 비용이 많이 드는 진단 기기를 다루기 힘든 지역에 기여할 수 있습니다. 
+저희는 부산대학교 인공지능 동아리에서 참여한 AID팀입니다. 혈관조영술 이미지만으로 뇌동맥류를 찾는 것은 숙련된 의료 전공자가 필수입니다. 이를 인공지능을 통해 정확하게 해석하고 자동화하는 것은 비용이 많이 드는 진단 기기를 다루기 힘든 지역에 기여할 수 있습니다. 
 
- 저희 팀은 크게 4가지의 데이터 전처리 시도를 하였습니다. 
- 1) labeling: Labelme를 활용한 뇌동맥류 직접 라벨링 
- 2) cropping: 각 이미지에서 보이는 부위별로 이미지 자르기 
- 3) masking: 각 이미지에서 뇌혈관을 제외한 배경 제거 
- 4) blur: 이미지 blur 알고리즘을 활용해 이미지에 블러 적용.
- ![mask](anomaly_detection_img/1001LI-A.jpg)
- ![blur](anomaly_detection_img/blur.png)
+저희 팀은 크게 4가지의 방법을 시도 하였습니다. 
+1) anomalib을 이용한 anomaly detection
+2) 각 type 별 classification + grad-cam
+3) multilable classification
+4) binary classification
 
- 
-저희가 데이터를 다루기 위해 접근한 방식은 anomaly detection, Classification과 CAM을 통한 위치지정 분류, 그리고 multilabel classification입니다. 일반적인 의료전문가가 뇌동맥류를 진단하기 위해서는 기존 뇌혈관 구조를 기반으로 뇌혈관 구조의 이상이 생긴 위치를 찾아 냅니다. 이를 모방하여 anomaly detection 방식을 시도했습니다. 또한, Classification을 이용하여 뇌동맥류를 판단하고 CAM을 통해 뇌동맥류의 위치를 찾고 분류하려 시도했습니다. 마지막으로 Multilabel classification으로 결과를 내는 모델을 시도했습니다.
 
-의료 전문가는 정상 뇌혈관의 구조를 알고 구조의 변형이 발생한 부분을 찾아 뇌동맥류를 진단합니다. Anomaly detection은 정상이미지 특징을 저장하는 unsupervised learning입니다. 기존 저장된 정상구조을 기준으로 테스트 이미지를 평가합니다. 테스트 이미지에서 정상적이지 않은 구조를 평가하여 비정상을 판단합니다. 저희가 선택한 anomaly detection 모델은 PaDim과 patchcore입니다.
+저희가 문제해결을 위해 anomaly detection, Classification과 CAM을 통한 위치지정 분류, 그리고 multilabel classification을 시도해보았습니다.
 
+아래는 anomalib의 PaDim 모델을 통해 얻은 결과입니다.
 ![1428LI-A](anomaly_detection_img/1428LI-A.jpg)
 ![2408RV-B](anomaly_detection_img/2480RV-B.jpg)
 ![2565RI-B](anomaly_detection_img/2565RI-B.jpg)
-위 이미지는 PaDim을 통해 얻은 이미지입니다.
 
-Anomaly detection을 이용하면 첫번째 이미지처럼 구조의 큰 변화는 잘 찾는 걸 볼 수 있습니다. 하지만 두번째 이미지처럼 혈관이 아닌 이미지를 구분하지 못하고, 세번째 이미지처럼 작은 뇌동맥류를 찾지 못했습니다. 결과를 본 후 뇌동맥류를 찾는데 anomaly detection을 이용하기 힘들다고 판단하였습니다.
+첫번째 이미지처럼 구조의 큰 변화는 잘 찾는 걸 볼 수 있습니다. 하지만 두번째 이미지처럼 혈관이 아닌 이미지를 구분하지 못하고, 세번째 이미지처럼 작은 뇌동맥류를 찾지 못했습니다. 결과를 본 후 뇌동맥류를 찾는데 anomaly detection을 이용하기 힘들다고 판단하였습니다.
 
 Classification과 CAM을 통한 위치지정 분류는 classification을 통해 학습한 모델이 집중한 부분을 특징지어 보려했습니다. 
 ![class_cam](anomaly_detection_img/class_cam.png)
 하지만 위 이미지처럼 모델이 특정한 위치의 부분이 혈관을 가르키지 못했습니다. 데이터의 특성상 값이 0인 비율이 커서 모델 학습이 정확하지 못하다고 판단하였습니다.
 
-Multilabel classification 레이블을 이용하여 Densenet기반 supervised learning을 실행하였습니다. 먼저 LI-A, LI-B, LV-A, LV-B, RI-A, RI-B, RV-A, RV-B 각각에 대해 모델을 만들었습니다. 예를 들어 LI-A에서 보이는 혈관은 L-ACA, MCA, ACOM, ICA입니다. 이 모델은 각 혈관에 대해 뇌동맥류가 있는지 판단합니다. 이후 전체 모델의 결과를 종합합니다. 혈관에서 뇌동맥류가 있을 확률은 한 혈관을 공통으로 가지고 있는 이미지의 결과중 최대값으로 합니다. LI-A와 LI-B는 혈관 L-ACA를 공통으로 갖습니다. LI-A에서 L-ACA가 뇌동맥류가 있을 확률이 0.3이고, LI-B에서 L-ACA에 뇌동맥류가 있을 확률이 0.8이라고 하면 L-ACA에 뇌동맥류가 있을 확률은 0.8입니다. 이렇게 하는 이유는 방향에 따라 구조이상이 보이지 않을 수 있기 때문입니다. 또한 뇌동맥류의 존재를 찾는 모델이므로 존재할 확률에 집중했습니다. 구해진 확률의 역치는 0.5로 했습니다. 확률이 역치를 넘으로 1, 아니면 0으로 판단합니다. 마지막으로 각 혈관에서 뇌동맥류가 있을 확률의 최대값을 개인에게 뇌동맥류가 있을 확률로 정합니다. 혈관 위치에 뇌동맥류가 존재한다는 것을 판단해야하기 때문입니다. 
+Multilabel classification 레이블을 이용하여 supervised learning을 실행하였습니다. 영상 type마다 보이는 부분이 달라 LI-A, LI-B, LV-A, LV-B, RI-A, RI-B, RV-A, RV-B 각각에 대해 모델을 만들었습니다. 레이블의 불균형으로 인해 weighted bceloss를 사용했고 각 모델에 대한 결과값을 종합해보았지만 대부분의 결과값이 0.5를 넘지 못하였고 AUROC score가 0.52정도에 그쳐 다른방법을 선택하기로 했습니다.
 
-![densenet](anomaly_detection_img/densenet.png)
-저희가 이번에 사용한 모델은 densenet입니다. Densenet은 어떤 layer의 input에대해 이전 모든 layer의 output을 합쳐 넣는 것입니다. 경험적으로 multilabel classification에서 densenet 모델의 성능이 확인되어 모델을 선정하게 되었습니다.
+## 최종 모델
 
-훈련 데이터는 혈관에 뇌동맥류가 존재하면 1 아니면 0으로 레이블 되어있습니다. Multilabel classification모델로 저희가 이용하는 데이터는 'Indes','Aneurysm'열을 제외한 데이터를 이용하는데 이 데이터는 밑 차트에서 보듯이 대부분이 0입니다. 이는 모델을 훈련시키는데 모델이 예측을 0으로만 했다고 해도 높은 정확도를 나타내게 되므로 손실함수를 설계했습니다. 
-![numof](anomaly_detection_img/numberof.png)
+최종적으로 저희팀은 AUROC 점수가 우선적으로 계산되기 때문에 위치보다 뇌동맥류 여부에 집중을 하기로 결정했습니다. 주어진 8장의 영상이미지를 합쳐 하나의 input으로 모델에 넣어서 최종적으로 뇌동맥류를 판단하도록 하는 모델로 구성했습니다.
 
-해당 손실 함수는 로짓을 입력으로 사용하여 이진 교차 엔트로피 손실을 계산하고 이를 통해 손실 계산 중에 각 레이블에 대해 뇌동맥류 양성 및 음성 샘플에 서로 다른 가중치를 할당할 수 있습니다.
+모델은 작으면서 결과값이 안정적으로 나오는 Efficientnet b4를 선택했고 timm라이브러리의 사전학습된 모델을 사용했습니다.
 
-loss 계산 과정은 다음과 같습니다:
-1. 로짓은 'torch.sigmoid'를 통해 시그모이드 함수를 통과하며 각 샘플에 대한 예측 확률 'ps'를 얻는다.
-2. 손실은 이진 교차 엔트로피 공식을 사용하여 양성 및 음성 샘플에 대해 별도로 계산된다.
+### 학습 세부 사항
 
-양성 샘플의 경우 손실은 -1 * torch.mean(self.w_p * labels * torch.log(ps + epsilon))로 계산되고, 해당 계산식은 양성 샘플(레이블 = 1)을 잘못 예측할 때 모델에 더 많은 패널티를 주게됩니다. 가중치 계수 self.w_p에 따라 손실 계산 중 양성 샘플에 대한 중요도를 조절할 수 있습니다.
+1. Augmentation
+- ElasticTransform
+- GaussianBlur
+- 256 x 256 resize
+- 8장의 이미지 GraySacle 변환후 concatenation하여 input으로 사용
+2. HyperParameter
+- epoch: 20
+- optimizer: Adam
+- learning rate: 0.001
+3. 
 
-음성 샘플의 경우 손실은 -1 * torch.mean(self.w_n * (1 - labels) * torch.log((1 - ps) + epsilon))로 계산됩니다. 이 계산식은 음성 샘플(레이블 = 0)을 잘못 예측할 때 모델에 더 많은 패널티를 줍니다. 네거티브 샘플(1 - labels)에 가중 계수 self.w_n을 곱함으로써 전체 loss에 대한 비중을 조정할 수 있습니다.
+### 결과
 
-최종 손실은 위의 positive 샘플과 negative 샘플의 손실을 합산하여 계산됩니다: loss = loss_pos + loss_neg.
+C-statistic(AUROC score):  

@@ -20,8 +20,8 @@ from torch.utils.data import Dataset, DataLoader
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
 
-from dataset import KiumDataset
-from model import Densenet121
+from dataset import KiumDataset, KiumDataset_v1
+from model import Densenet121, Densenet121_v1, Effnetb4_v1
 from loss import W_BCEWithLogitsLoss
 
 def seed_everything(seed):
@@ -36,7 +36,7 @@ def seed_everything(seed):
 
 class Trainer:
   def __init__(self):
-    self.epoch = 10
+    self.epoch = 20
     self.lr = 0.001
     self.seed = 44
     self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -64,32 +64,34 @@ class Trainer:
   
   def setup(self):
     
-    self.model = Densenet121(num_features=len(self.label_dict[self.img_type])-1)
-    self.loss_fn = W_BCEWithLogitsLoss(w_p=0.8, w_n=0.2)
+    self.model = Effnetb4_v1()
+    self.loss_fn = nn.BCELoss()
     
     #  랜덤 시드 설정
     seed_everything(self.seed)
     
     # df 수정
-    tmp_df = pd.read_csv(os.path.join(self.root_dir, "train_set/train.csv"))
-    self.df = pd.DataFrame(columns=["path", *self.label_dict[self.img_type]])
+    self.df = pd.read_csv(os.path.join(self.root_dir, "train_set/train.csv"))
+    self.df["path"] = self.df["Index"].apply(lambda x: os.path.join(self.root_dir, "train_set", str(x)))
+    # tmp_df = pd.read_csv(os.path.join(self.root_dir, "train_set/train.csv"))
+    # self.df = pd.DataFrame(columns=["path", *self.label_dict[self.img_type]])
     
-    paths = []
-    labels = {l: [] for l in self.label_dict[self.img_type]}
+    # paths = []
+    # labels = {l: [] for l in self.label_dict[self.img_type]}
     
-    for idx, row in tmp_df.iterrows():
-      paths.append(os.path.join(self.root_dir, "train_set", str(row["Index"])))
+    # for idx, row in tmp_df.iterrows():
+    #   paths.append(os.path.join(self.root_dir, "train_set", str(row["Index"])))
       
-      for label in labels:
-        labels[label].append(1 if row[label] == 1 else 0)
+    #   for label in labels:
+    #     labels[label].append(1 if row[label] == 1 else 0)
     
-    self.df["path"] = paths
-    for k, v in labels.items():
-      self.df[k] = v
+    # self.df["path"] = paths
+    # for k, v in labels.items():
+    #   self.df[k] = v
     
     x_train, x_val, y_train, y_val = train_test_split(
       self.df["path"].values,
-      self.df.drop(columns=["path", "Aneurysm"]).values,
+      self.df["Aneurysm"].values,
       test_size=0.2,
       random_state=self.seed,
       stratify=self.df["Aneurysm"])
@@ -109,18 +111,18 @@ class Trainer:
       ToTensorV2()
     ])
     
-    train_dataset = KiumDataset(img_paths=x_train, labels=y_train, img_type=self.img_type, transforms=train_transforms)
-    val_dataset = KiumDataset(img_paths=x_val, labels=y_val, img_type=self.img_type, transforms=val_transforms)
+    train_dataset = KiumDataset_v1(img_paths=x_train, labels=y_train, transforms=train_transforms)
+    val_dataset = KiumDataset_v1(img_paths=x_val, labels=y_val, transforms=val_transforms)
     
     self.train_dataloader = DataLoader(
       dataset=train_dataset,
-      batch_size=16, 
+      batch_size=32, 
       shuffle=True
     )
     
     self.val_dataloader = DataLoader(
       dataset=val_dataset,
-      batch_size=16,
+      batch_size=32,
       shuffle=False
     )
     
@@ -200,9 +202,9 @@ class Trainer:
       else:
         early_stop += 1
       
-      if early_stop > 7:
+      if early_stop > 5:
         break
       
-    torch.save(best_model, f'./ckpt/densenet121_{self.img_type}.pth')
+    torch.save(best_model, f'./ckpt/effnetb4.pth')
     
     
