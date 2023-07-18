@@ -1,7 +1,5 @@
 # k-ium 의료 인공지능 경진대회
 
----
-
 **팀명 : AID**
 |팀원 이름|github|
 |---|---|
@@ -21,6 +19,7 @@
 > ### GPU
 > - NVIDIA GeForce RTX 3060
 > ---
+> ### 가상환경 
 > - pyenv-win version 3.1.1
 > - python 3.9.13
 > - 자세한 라이브러리는 Pipfile, Pipfile.lock을 통해 확인 가능
@@ -38,8 +37,9 @@ ckpt
  -- pth file
 data
  -- trian_set
-  -- 이미지
+  -- images
   -- train.csv
+main.py
 ...
 
 git clone https://github.com/sihyeong671/k-ium-medical-AI-competition.git
@@ -78,8 +78,10 @@ python main.py --mode=test
 
 첫번째 이미지처럼 구조의 큰 변화는 잘 찾는 걸 볼 수 있습니다. 하지만 두번째 이미지처럼 혈관이 아닌 이미지를 구분하지 못하고, 세번째 이미지처럼 작은 뇌동맥류를 찾지 못했습니다. 결과를 본 후 뇌동맥류를 찾는데 anomaly detection을 이용하기 힘들다고 판단하였습니다.
 
-Classification과 CAM을 통한 위치지정 분류는 classification을 통해 학습한 모델이 집중한 부분을 특징지어 보려했습니다. 
-![class_cam](anomaly_detection_img/class_cam.png)
+Classification과 CAM을 통한 위치지정 분류는 classification을 통해 학습한 모델이 집중한 부분을 특징지어 보려했습니다.
+<p align=center>
+<img src="anomaly_detection_img/class_cam.png" alt="drawing" style="width:300px;"/>
+</p>
 하지만 위 이미지처럼 모델이 특정한 위치의 부분이 혈관을 가르키지 못했습니다. 데이터의 특성상 값이 0인 비율이 커서 모델 학습이 정확하지 못하다고 판단하였습니다.
 
 Multilabel classification 레이블을 이용하여 supervised learning을 실행하였습니다. 영상 type마다 보이는 부분이 달라 LI-A, LI-B, LV-A, LV-B, RI-A, RI-B, RV-A, RV-B 각각에 대해 모델을 만들었습니다. 레이블의 불균형으로 인해 weighted bceloss를 사용했고 각 모델에 대한 결과값을 종합해보았지만 대부분의 결과값이 0.5를 넘지 못하였고 AUROC score가 0.52정도에 그쳐 다른방법을 선택하기로 했습니다.
