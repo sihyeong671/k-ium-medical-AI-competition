@@ -34,13 +34,19 @@
 
 # 폴더 구조
 ckpt
- -- pth file
+  -- pth file
 data
- -- trian_set
-  -- images
-  -- train.csv
+  -- test_set
+  -- train_set
+    -- images
+    -- train.csv
 main.py
-...
+trainer.py
+model.py
+dataset.py
+predictor.py
+# loss.py
+
 
 git clone https://github.com/sihyeong671/k-ium-medical-AI-competition.git
 cd k-ium-medical-AI-competition
@@ -53,6 +59,7 @@ pipenv shell
 # output pth이름은 trainer.py의 torch.save에서 이름 수정 필요
 python main.py --mode=train
 # 추론
+# 추론시 데이터 및 csv를 가져오는 경로가 train_set로 되어있어 코드내의 경로를 수정하거나 추론할 데이터 및 경로, 레이블이 포함된 csv파일을 train_set에 넣어주어야 합니다.
 # load_model funcion에서 사용할 모델이름 수정 필요
 python main.py --mode=test
 ```
