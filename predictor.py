@@ -34,8 +34,8 @@ def predict():
   # }
   
   # csv 가져오기
-  df = pd.read_csv("./data/train_set/train.csv")
-  df["path"] = df["Index"].apply(lambda x: os.path.join("data/train_set", str(x)))
+  df = pd.read_csv("./test_set/test.csv")
+  df["path"] = df["Index"].apply(lambda x: os.path.join("test_set", f"{x:04d}"))
   
   test_transforms = A.Compose([
     A.Normalize(0.5, 0.225),
